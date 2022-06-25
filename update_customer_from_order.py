@@ -4,13 +4,16 @@ order_id = self.get_map_field_by_src(self.TYPE_ORDER, convert['id'], convert['co
 		gender = 0
 		customer=convert["customer"]
 		customer_address=convert["customer_address"]
+
 		# neu customer khong co email thi return true 
 		if not customer['email'] and not customer_address['email']:
-			return True
+			return self.get_map_field_by_src(self.TYPE_ORDER, convert['id'], convert['code'])
+
 		# goi xem email cua customer da ton tai hay chua
 		select = self.create_select_query_connector('customer', {'email': customer['email']})
 		customer_data = self.select_data_connector(select)
 		self.log(customer_data,'customer_data')
+
 		#neu email chua ton tai thi tao mot customer moi roi insert len
 		if not customer_data['data']:
 			customer_data = {
@@ -29,6 +32,7 @@ order_id = self.get_map_field_by_src(self.TYPE_ORDER, convert['id'], convert['co
 				'date_upd': get_current_time(),
 				'active': 1 ,}
 			id_customer = self.import_data_connector(self.create_insert_query_connector('customer', customer_data), 'import_customer',convert['id'])
+		
 			# sau khi insert len target thi insert vao map
 			if id_customer:
 				self.insert_map(self.TYPE_CUSTOMER, None, id_customer, customer['email'])
@@ -37,9 +41,15 @@ order_id = self.get_map_field_by_src(self.TYPE_ORDER, convert['id'], convert['co
 					self.insert_address(id_customer,customer_address)
 			else:
 				return response_error(self.warning_import_entity(self.TYPE_CUSTOMER, convert['id'], convert['code']))
+		
 		# neu email da ton tai thi lay ra id_customer
 		else:
 			id_customer = customer_data['data'][0]['id_customer']
+
 		# dung id_customer de map voi oder
-		response = self.import_data_connector(self.create_update_query_connector('orders', {"id_customer":id_customer},{"id_order":order_id}), 'update_link_customer', convert['id'])
-		response = self.import_data_connector(self.create_update_query_connector('customer_thread', {"id_customer":id_customer},{"id_order":order_id}), 'update_customer_thread', convert['id'])
+		if order_id and id_customer:
+			response = self.import_data_connector(self.create_update_query_connector('orders', {"id_customer":id_customer},{"id_order":order_id}), 'update_link_customer', convert['id'])
+			response = self.import_data_connector(self.create_update_query_connector('customer_thread', {"id_customer":id_customer},{"id_order":order_id}), 'update_customer_thread', convert['id'])
+### def order_import(self, convert, order, orders_ext):
+		if convert['customer']['email']:
+			id_customer = self.get_map_field_by_src(self.TYPE_CUSTOMER, None, convert['customer']['email'])
